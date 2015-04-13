@@ -9,12 +9,12 @@ if os.environ.get('USER', '') == 'vagrant':
 requirements = [r.strip() for r in open('requirements.txt').readlines() if not r.startswith('--')]
 requirements = [r if ('git+' not in r) else re.sub(r".*egg=(.*)", r"\1", r).strip() for r in requirements]
 
-SYSTEM_CONFIG_PATH = "/etc/"
-SYSTEM_LOG_PATH = "/var/log/"
-if platform.system() == "Windows":
-    SYSTEM_CONFIG_PATH = "C:/python_app_settings/"
-    SYSTEM_LOG_PATH = "C:/python_app_logs/"
-
+data_files = []
+if platform.system() != "Windows":
+    data_files = [
+        ('/etc/jobmanager', ['bin/client.ini', 'bin/client.spec']),
+        ('/var/log/jobmanager', [])
+    ]
 
 setup(
     name='jobmanager-client',
@@ -25,10 +25,7 @@ setup(
     packages=find_packages(where='.', exclude=["fabfile", "tools", "*.tests", "*.tests.*", "tests.*", "tests"]),
     package_data={}, #{'mypkg': ['data/*.dat']},
     scripts=['bin/jobmanager-client'],
-    data_files=[
-        (SYSTEM_CONFIG_PATH + 'jobmanager', ['bin/client.ini', 'bin/client.spec']),
-        (SYSTEM_LOG_PATH + 'jobmanager', [])
-    ],
+    data_files=data_files,
     license=open('LICENCE.txt').read().strip(),
     description='Job Manager Client',
     long_description=open('README.md').read().strip(),
