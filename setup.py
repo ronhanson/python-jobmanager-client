@@ -1,12 +1,20 @@
 from setuptools import setup, find_packages
 import os
 import re
+import platform
 
 if os.environ.get('USER', '') == 'vagrant':
     del os.link
 
 requirements = [r.strip() for r in open('requirements.txt').readlines() if not r.startswith('--')]
 requirements = [r if ('git+' not in r) else re.sub(r".*egg=(.*)", r"\1", r).strip() for r in requirements]
+
+SYSTEM_CONFIG_PATH = "/etc/"
+SYSTEM_LOG_PATH = "/var/log/"
+if platform.system() == "Windows":
+    SYSTEM_CONFIG_PATH = "C:/python_app_settings/"
+    SYSTEM_LOG_PATH = "C:/python_app_logs/"
+
 
 setup(
     name='jobmanager-client',
@@ -18,8 +26,8 @@ setup(
     package_data={}, #{'mypkg': ['data/*.dat']},
     scripts=['bin/jobmanager-client'],
     data_files=[
-        ('/etc/jobmanager', ['bin/client.ini', 'bin/client.spec']),
-        ('/var/log/jobmanager', [])
+        (SYSTEM_CONFIG_PATH + 'jobmanager', ['bin/client.ini', 'bin/client.spec']),
+        (SYSTEM_LOG_PATH + 'jobmanager', [])
     ],
     license=open('LICENCE.txt').read().strip(),
     description='Job Manager Client',
