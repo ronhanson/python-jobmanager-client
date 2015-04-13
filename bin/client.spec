@@ -5,6 +5,7 @@
     NAME = string(default="jobmanager")
 
 [JOBS]
+    AMOUNT = integer(default=4)
     MODULES = list()
 
 [LOG]

@@ -12,9 +12,13 @@ import pprint
 import logging
 import sys
 import traceback
+import mongoengine
+
+settings = tbx.settings.from_file('client', application_name='jobmanager')
+
 
 from multiprocessing import Pool
-POOL_SIZE = 4
+POOL_SIZE = settings.JOBS.AMOUNT
 
 
 class JobManagerClientService(tbx.service.Service):
@@ -75,5 +79,16 @@ class JobManagerClientService(tbx.service.Service):
                 job.details = "Exception : %s" % (str(err))
                 job.save_as_error(text=str(err))
 
-        self.process_pool.apply_async(job.run, callback=check_job_success, error_callback=check_job_error)
+        self.process_pool.apply_async(connect_and_launch, args=(job.run,), callback=check_job_success, error_callback=check_job_error)
         return
+
+
+def connect_and_launch(func):
+    """
+    Connect to database prior to launch the func method.
+    Useful as new processes don't have active connections...
+    :param func:
+    :return:
+    """
+    mongoengine.connect(host=settings.DATABASE.HOST, port=settings.DATABASE.PORT, db=settings.DATABASE.NAME)
+    func()
