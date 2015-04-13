@@ -13,21 +13,30 @@ import jobmanager
 import jobmanager.client
 import mongoengine
 import tbx
-from pymongo import read_preferences
+import tbx.service
+import tbx.settings
+import tbx.log
+import logging
 
-tbx.log.configure_logging_to_screen()
+settings = tbx.settings.from_file('client', application_name='jobmanager')
+tbx.log.configure_logging("jobmanager-client", application_name='jobmanager', settings=settings.LOG)
+
+
+def import_from_name(module_name):
+    globals()[module_name] = __import__(module_name)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="""Job Manager Command Launcher""", epilog='"Be strong, be good. But have a glass of wine first."')
+    mongoengine.connect(host=settings.DATABASE.HOST, port=settings.DATABASE.PORT, db=settings.DATABASE.NAME)
 
-    args = vars(parser.parse_args())
+    for mod in settings.JOBS.MODULES:
+        try:
+            import_from_name(mod)
+        except ImportError:
+            logging.error("Can't import Job module '%s' as defined in settings. Exiting." % mod)
+            exit(1)
 
-    mongoengine.connect(host='localhost', port=27017, db='jobmanager8', read_preference=read_preferences.ReadPreference.PRIMARY)
-
-    tbx.service.launch_service(service=jobmanager.client.JobManagerClientService,
-                             parser_callback=None,
-    )
+    tbx.service.launch_service(service=jobmanager.client.JobManagerClientService)
 
     exit(0)
 

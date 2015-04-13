@@ -17,6 +17,10 @@ setup(
     packages=find_packages(where='.', exclude=["fabfile", "tools", "*.tests", "*.tests.*", "tests.*", "tests"]),
     package_data={}, #{'mypkg': ['data/*.dat']},
     scripts=['bin/jobmanager-client'],
+    data_files=[
+        ('/etc/jobmanager', ['bin/client.ini', 'bin/client.spec']),
+        ('/var/log/jobmanager', [])
+    ],
     license=open('LICENCE.txt').read().strip(),
     description='Job Manager Client',
     long_description=open('README.md').read().strip(),

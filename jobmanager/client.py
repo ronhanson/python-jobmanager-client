@@ -28,6 +28,13 @@ class JobManagerClientService(tbx.service.Service):
         super(JobManagerClientService, self).setup()
         self.process_pool = Pool(processes=POOL_SIZE, maxtasksperchild=1)
 
+    def destroy(self):
+        logging.warning("Destroying service %s" % self.service_name)
+        self.process_pool.terminate()
+        self.process_pool.join()
+        logging.info("Process pool terminated.")
+        return None
+
     def find_some_jobs(self):
         """
         Find as much jobs possible from the DB.
@@ -39,8 +46,7 @@ class JobManagerClientService(tbx.service.Service):
         while job_found:
             nb += 1
             jobs.append(job_found)
-            if nb == self.process_pool._processes:
-                #maximum of POOL_SIZE jobs at once...
+            if nb >= self.process_pool._processes: #maximum of POOL_SIZE jobs at once...
                 break
             job_found = Job.objects(status=self.pending_status).modify(status=self.running_status)
         return jobs
