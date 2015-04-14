@@ -16,8 +16,8 @@ if platform.system() != "Windows":
         ('/etc/jobmanager', ['bin/client.ini', 'bin/client.spec']),
         ('/var/log/jobmanager', [])
     ]
-else:
-    scripts = ['bin/jobmanager-client', 'bin/client.ini', 'bin/client.spec']
+#else:
+#    scripts = ['bin/jobmanager-client', 'bin/client.ini', 'bin/client.spec']
 
 setup(
     name='jobmanager-client',

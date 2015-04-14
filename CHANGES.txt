@@ -8,3 +8,4 @@
 2015-04-13	--	v0.4.2	-- Updated install script for windows
 2015-04-13	--	v0.4.3	-- Install script update for Windows
 2015-04-13	--	v0.5.0	-- Misc changes
+2015-04-14	--	v0.5.1	-- Small fix
