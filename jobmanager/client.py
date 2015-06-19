@@ -70,10 +70,14 @@ class JobManagerClientService(tbx.service.Service):
 
         def check_job_success(err):
             job.reload()
+            logging.debug("Job success callback : %s" % job.status)
+            logging.debug(err)
             if job.status not in ['success', 'error']:
                 job.save_as_successful()
 
         def check_job_error(err):
+            logging.error("Job ERROR callback")
+            logging.exception(err)
             job.reload()
             if job.status != 'error':
                 job.details = "Exception : %s" % (str(err))

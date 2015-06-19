@@ -10,3 +10,4 @@
 2015-04-13	--	v0.5.0	-- Misc changes
 2015-04-14	--	v0.5.1	-- Small fix
 2015-04-17	--	v0.5.2	-- Micro fix
+2015-06-19	--	v0.5.3	-- Added callback logging.
