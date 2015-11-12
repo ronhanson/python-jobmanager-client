@@ -12,3 +12,4 @@
 2015-04-17	--	v0.5.2	-- Micro fix
 2015-06-19	--	v0.5.3	-- Added callback logging.
 2015-11-12	--	v0.5.4-stable	-- Changed default config for master / stable branch
+2015-11-12	--	v0.5.4a-stable	-- build tools update
