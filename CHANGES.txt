@@ -14,3 +14,4 @@
 2015-11-12	--	v0.5.4-stable	-- Changed default config for master / stable branch
 2015-11-12	--	v0.5.4a-stable	-- build tools update
 2015-11-13	--	v0.5.4b-stable	-- build script for windows
+2015-11-13	--	v0.5.4c-winstable	-- windows config
