@@ -4,6 +4,8 @@ cd ../..
 mv requirements.txt _requirements.txt
 touch requirements.txt
 
+mv jobmanager/__init__.py jobmanager/__init__.py.log
+
 echo ""
 echo "Packaging .DEB now..."
 echo ""
@@ -33,6 +35,8 @@ echo ""
 
 cp _requirements.txt requirements.txt
 rm _requirements.txt
+
+mv jobmanager/__init__.py.log jobmanager/__init__.py
 
 cd tools/build/
 source ./clean_deb.sh

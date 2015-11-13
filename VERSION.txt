@@ -1,1 +1,1 @@
-0.5.4c-stable
+0.5.5-stable
