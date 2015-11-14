@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+/etc/init.d/jobmanager-client stop
+update-rc.d -f jobmanager-client remove

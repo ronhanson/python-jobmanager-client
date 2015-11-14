@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+set -e
+
+JM_USER="jobmanager"
+JM_HOME="/var/lib/${JM_USER}"
+JM_LOGS="/var/log/jobmanager"
+
+case "$1" in
+    configure)
+        set +e
+        mkdir --parent "${JM_HOME}"
+        mkdir --parent "${JM_LOGS}"
+
+        # Check if user jobmanager exists, and if not, create it.
+        getent passwd ${JM_USER} >/dev/null
+        if [ $? == 2 ]
+        then
+            adduser --system --home "${JM_HOME}" --no-create-home --gecos "Job Manager account" --disabled-login ${JM_USER}
+
+            # Set file permissions for the homedir
+            chown -R ${JM_USER}: ${JM_HOME} >/dev/null
+            chown -R ${JM_USER}: ${JM_LOGS} >/dev/null
+        fi
+        update-rc.d jobmanager-client defaults
+        /etc/init.d/jobmanager-client start
+        set -e
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
