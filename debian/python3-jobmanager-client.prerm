@@ -1,4 +1,11 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
-/etc/init.d/jobmanager-client stop
-update-rc.d -f jobmanager-client remove
+case "$1" in
+    remove)
+        # Stop the service
+        /etc/init.d/jobmanager-client stop
+
+        # Remove the service init script
+        update-rc.d jobmanager-client remove
+    ;;
+esac
