@@ -56,7 +56,7 @@ class JobManagerClientService(tbx.service.Service):
         return jobs
 
     def run(self):
-        logging.info("Run %s with %s processes (debug:%s)" % (self.service_name, self.process_pool._processes, self.debug))
+        #logging.info("Run %s with %s processes (debug:%s)" % (self.service_name, self.process_pool._processes, self.debug))
 
         jobs = self.find_some_jobs()
 

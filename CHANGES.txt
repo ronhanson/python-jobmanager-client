@@ -19,3 +19,4 @@
 2015-11-14	--	v0.6.0-stable	-- Debian packaging and startup script
 2015-11-14	--	v0.6.0a-stable	-- fix:wq
 2015-11-16	--	v0.6.1-stable	-- init script update
+2015-11-16	--	v0.6.2-stable	-- Misc fixes
