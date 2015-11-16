@@ -22,3 +22,5 @@
 2015-11-16	--	v0.6.2-stable	-- Misc fixes
 2015-11-16	--	v0.6.3-stable	-- fix
 2015-11-16	--	v0.6.4-stable	-- fix
+2015-11-16	--	v0.6.4a-stable	-- config fix
+2015-11-16	--	v0.6.4a-stable	-- config fix
