@@ -20,6 +20,14 @@ Default: cinecardz
 Description:
  Please enter the Job-Manager database name.
 
+Template: jobmanager-client/amount
+Type: string
+Default: 1
+Description:
+ Please enter the amount of simulaneous jobs the Job-Manager should take care of.
+ .
+ Default amount is 1
+
 Template: jobmanager-client/modules
 Type: string
 Description:

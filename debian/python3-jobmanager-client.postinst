@@ -46,6 +46,10 @@ case "$1" in
         db_input high jobmanager-client/dbname
         db_go
 
+        db_fset jobmanager-client/amount seen false
+        db_input high jobmanager-client/amount
+        db_go
+
         db_fset jobmanager-client/modules seen false
         db_input high jobmanager-client/modules
         db_go
@@ -59,6 +63,9 @@ case "$1" in
 
         db_get jobmanager-client/dbname
         sed -i -e "/^\[DATABASE\]/,/^\[.*\]/ s|^\([ \t]*NAME[ \t]*=[ \t]*\).*$|\1\"${RET}\"|" ${JM_CONF}
+
+        db_get jobmanager-client/amount
+        sed -i -e "/^\[JOBS\]/,/^\[.*\]/ s|^\([ \t]*AMOUNT[ \t]*=[ \t]*\).*$|\1${RET}|" ${JM_CONF}
 
         db_get jobmanager-client/modules
         sed -i -e "/^\[JOBS\]/,/^\[.*\]/ s|^\([ \t]*MODULES[ \t]*=[ \t]*\).*$|\1${RET}|" ${JM_CONF}
