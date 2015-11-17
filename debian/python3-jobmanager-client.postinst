@@ -1,16 +1,23 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 set -e
 
 JM_USER="jobmanager"
 JM_HOME="/var/lib/${JM_USER}"
 JM_LOGS="/var/log/jobmanager"
+JM_CONF="/etc/jobmanager/client.ini"
 
 case "$1" in
     configure)
-        set +e
-        mkdir --parent "${JM_HOME}"
-        mkdir --parent "${JM_LOGS}"
+        if [ ! -d ${JM_HOME} ]
+        then
+            mkdir --verbose --parent "${JM_HOME}"
+        fi
+        
+        if [ ! -d ${JM_LOGS} ]
+        then
+            mkdir --verbose --parent "${JM_LOGS}"
+        fi
 
         # Check if user jobmanager exists, and if not, create it.
         getent passwd ${JM_USER} >/dev/null
@@ -22,16 +29,53 @@ case "$1" in
             chown -R ${JM_USER}: ${JM_HOME} >/dev/null
             chown -R ${JM_USER}: ${JM_LOGS} >/dev/null
         fi
+        
+        # Now the debconf part to configure package
+        . /usr/share/debconf/confmodule
+        
+        # First, ask user the questions
+        db_fset jobmanager-client/dbhost seen false
+        db_input high jobmanager-client/dbhost
+        db_go
+
+        db_fset jobmanager-client/dbport seen false
+        db_input high jobmanager-client/dbport
+        db_go
+
+        db_fset jobmanager-client/dbname seen false
+        db_input high jobmanager-client/dbname
+        db_go
+
+        db_fset jobmanager-client/modules seen false
+        db_input high jobmanager-client/modules
+        db_go
+        
+        # Now configure the ini file using answers...
+        db_get jobmanager-client/dbhost
+        sed -i -e "/^\[DATABASE\]/,/^\[.*\]/ s|^\([ \t]*HOST[ \t]*=[ \t]*\).*$|\1\"${RET}\"|" ${JM_CONF}
+
+        db_get jobmanager-client/dbport
+        sed -i -e "/^\[DATABASE\]/,/^\[.*\]/ s|^\([ \t]*PORT[ \t]*=[ \t]*\).*$|\1${RET}|" ${JM_CONF}
+
+        db_get jobmanager-client/dbname
+        sed -i -e "/^\[DATABASE\]/,/^\[.*\]/ s|^\([ \t]*NAME[ \t]*=[ \t]*\).*$|\1\"${RET}\"|" ${JM_CONF}
+
+        db_get jobmanager-client/modules
+        sed -i -e "/^\[JOBS\]/,/^\[.*\]/ s|^\([ \t]*MODULES[ \t]*=[ \t]*\).*$|\1${RET}|" ${JM_CONF}
+
+        # Finished with DebConf database...
+        db_stop
+
+        # Add service to startup and start it...
         update-rc.d jobmanager-client defaults
         /etc/init.d/jobmanager-client start
-        set -e
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
     ;;
 
     *)
-        echo "postinst called with unknown argument \`$1'" >&2
+        echo "postinst called with unknown argument '$1'" >&2
         exit 1
     ;;
 esac

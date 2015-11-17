@@ -1,0 +1,31 @@
+Template: jobmanager-client/dbhost
+Type: string
+Default: job-database.prod.ccz
+Description:
+ Please enter the Job-Manager database server name.
+ .
+ This database is the MongoDB containing jobs.
+
+Template: jobmanager-client/dbport
+Type: string
+Default: 27017
+Description:
+ Please enter the Job-Manager database port number.
+ .
+ Default port for MongoDB is 27017.
+
+Template: jobmanager-client/dbname
+Type: string
+Default: cinecardz
+Description:
+ Please enter the Job-Manager database name.
+
+Template: jobmanager-client/modules
+Type: string
+Description:
+ Please enter the modules the Job-Manager should import.
+ .
+ For example: "mypackage.mymodule1","mypackage.mymodule2",
+ .
+ Default value is empty.
+
