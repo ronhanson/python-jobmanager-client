@@ -27,3 +27,4 @@
 2015-11-17	--	v0.7.0-stable	-- Debconf setup for deb install
 2015-11-17	--	v0.7.0-stable	-- Debconf update
 2015-11-19	--	v0.7.0a-stable	-- fix
+2015-11-19	--	v0.7.1-stable	-- version bump
