@@ -19,6 +19,7 @@ case "$1" in
             mkdir --verbose --parent "${JM_LOGS}"
         fi
 
+        set +e
         # Check if user jobmanager exists, and if not, create it.
         getent passwd ${JM_USER} >/dev/null
         if [ $? == 2 ]
@@ -29,6 +30,7 @@ case "$1" in
             chown -R ${JM_USER}: ${JM_HOME} >/dev/null
             chown -R ${JM_USER}: ${JM_LOGS} >/dev/null
         fi
+        set -e
         
         # Now the debconf part to configure package
         . /usr/share/debconf/confmodule
