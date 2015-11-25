@@ -8,6 +8,7 @@ Job Manager Utility - Main File
 """
 import os
 import sys
+import time
 import argparse
 import jobmanager
 import jobmanager.client
@@ -27,16 +28,27 @@ def import_from_name(module_name):
 
 
 def main():
-    mongoengine.connect(host=settings.DATABASE.HOST, port=settings.DATABASE.PORT, db=settings.DATABASE.NAME)
-
-    for mod in settings.JOBS.MODULES:
+    while True:
         try:
-            import_from_name(mod)
-        except ImportError:
-            logging.error("Can't import Job module '%s' as defined in settings. Exiting." % mod)
-            exit(1)
+            mongoengine.connect(host=settings.DATABASE.HOST, port=settings.DATABASE.PORT, db=settings.DATABASE.NAME)
 
-    tbx.service.launch_service(service=jobmanager.client.JobManagerClientService)
+            for mod in settings.JOBS.MODULES:
+                try:
+                    import_from_name(mod)
+                except ImportError:
+                    logging.error("Can't import Job module '%s' as defined in settings. Exiting." % mod)
+                    exit(1)
+
+            tbx.service.launch_service(service=jobmanager.client.JobManagerClientService)
+        except KeyboardInterrupt:
+            logging.error("Received Keyboard Interrupt. Exiting.")
+            exit(1)
+        except mongoengine.ConnectionError:
+            logging.exception("Database connection error to %s. Waiting 10 seconds for retry..." % settings.DATABASE.HOST)
+            time.sleep(10)
+        except Exception as e:
+            logging.exception("Unknown Error (%s). Waiting 10 seconds for retry..." % str(e))
+            time.sleep(10)
 
     exit(0)
 
