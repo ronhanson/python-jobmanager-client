@@ -31,3 +31,4 @@
 2015-11-25	--	v0.7.2-stable	-- fix
 2015-11-25	--	v0.7.3-stable	-- fix
 2015-11-25	--	v0.7.4-stable	-- Exception catcher
+2016-02-11	--	v0.8.0-stable	-- Major overhaul - no more process pool. Timeout features. TTL/retry features.. Bugfix: Don't consume more job than slot available.

@@ -39,10 +39,10 @@ def main():
                     logging.error("Can't import Job module '%s' as defined in settings. Exiting." % mod)
                     exit(1)
 
-            tbx.service.launch_service(service=jobmanager.client.JobManagerClientService)
-        except KeyboardInterrupt:
-            logging.error("Received Keyboard Interrupt. Exiting.")
-            exit(1)
+            result = tbx.service.launch_service(service=jobmanager.client.JobManagerClientService)
+
+            #everything went normal
+            exit(result)
         except mongoengine.ConnectionError:
             logging.exception("Database connection error to %s. Waiting 10 seconds for retry..." % settings.DATABASE.HOST)
             time.sleep(10)
