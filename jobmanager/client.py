@@ -12,11 +12,13 @@ import tbx.log
 import tbx.text
 import tbx.service
 import tbx.settings
-from jobmanager.common.job import Job
+from jobmanager.common.job import Job, Client, ClientStatus
+import socket
 import pprint
 import logging
 import sys
 import traceback
+from threading import Event, Thread
 import mongoengine
 from datetime import datetime, timedelta
 from multiprocessing import Process
@@ -26,6 +28,16 @@ import time
 settings = tbx.settings.from_file('client', application_name='jobmanager')
 POOL_SIZE = settings.JOBS.AMOUNT
 
+
+def call_repeatedly(interval, func, *args):
+    stopped = Event()
+
+    def loop():
+        while not stopped.wait(interval): # the first call is in `interval` secs
+            func(*args)
+
+    Thread(target=loop).start()
+    return stopped.set
 
 class JobManagerClientService(tbx.service.Service):
     """
@@ -39,11 +51,31 @@ class JobManagerClientService(tbx.service.Service):
         self.current_jobs = []
         self.process_number_list = list(range(1, POOL_SIZE+1))
 
+        self.client = Client()
+        self.client.hostname = socket.gethostname()
+        self.client.pid = os.getpid()
+        self.client.pool_size = POOL_SIZE
+        self.client.job_types = [k.__name__ for k in tbx.code.get_subclasses(Job)]
+        self.client.save()
+
+        self.status_update_stopper = call_repeatedly(1, self.update_client_status)
+
+    def update_client_status(self):
+        self.client.save()
+
+        status = ClientStatus()
+        status.client = self.client
+        status.current_jobs = [proc.job for proc in self.current_jobs]
+        status.busy_slots = len(self.current_jobs)
+        status.available_slots = self.available_slot
+        status.save()
+
     def destroy(self):
         logging.warning("Destroying service %s" % self.service_name)
-        for job in self.current_jobs:
-            job.terminate()
-            job.join()
+        self.status_update_stopper()
+        for proc in self.current_jobs:
+            proc.terminate()
+            proc.join()
         logging.info("Processes terminated.")
         return None
 
@@ -115,7 +147,7 @@ class JobManagerClientService(tbx.service.Service):
                         new_job.save()
                         logging.info("New job %s created... Set to be retried!" % (new_job.uuid))
                         logging.info("Now sleeping a bit to let other job manager have a chance to get that new job...")
-                        time.sleep(4.5)
+                        time.sleep(self.loop_duration*1.05)
 
                     if proc in self.current_jobs:
                         self.current_jobs.remove(proc)
@@ -131,15 +163,20 @@ class JobManagerClientService(tbx.service.Service):
         """
         #logging.debug("Run %s with %d processes, %d busy (debug:%s)" % (self.service_name, POOL_SIZE, len(self.current_jobs), self.debug))
 
-        #clean current jobs
+        # Clean current jobs
         self.check_current_jobs()
 
-        #find new jobs
+        # Find new jobs
         jobs = self.find_some_jobs()
 
-        #process found jobs
+        # Process found jobs
         for job in jobs:
             self.process_job(job)
+
+        # Sleeps a tiny bit to shift if I managed to get a job.
+        # That avoids job managers to be in sync when they query the database.
+        if len(jobs):
+            time.sleep(self.loop_duration*len(jobs)/10)
 
         return
 
@@ -200,8 +237,8 @@ def launch_job(job, process_number):
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     tbx.log.configure_logging("jobmanager-client-%02d" % process_number, application_name='jobmanager', settings=settings.LOG, force=True)
-
-    mongoengine.connect(host=settings.DATABASE.HOST, port=settings.DATABASE.PORT, db=settings.DATABASE.NAME)
+    mongoengine.disconnect()
+    mongoengine.connect(host=settings.DATABASE.HOST, port=settings.DATABASE.PORT, db=settings.DATABASE.NAME, connect=False)
     try:
         job.run()
         exit(0)

@@ -30,7 +30,7 @@ def import_from_name(module_name):
 def main():
     while True:
         try:
-            mongoengine.connect(host=settings.DATABASE.HOST, port=settings.DATABASE.PORT, db=settings.DATABASE.NAME)
+            mongoengine.connect(host=settings.DATABASE.HOST, port=settings.DATABASE.PORT, db=settings.DATABASE.NAME, connect=False)
 
             for mod in settings.JOBS.MODULES:
                 try:
