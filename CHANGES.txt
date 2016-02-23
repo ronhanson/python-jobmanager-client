@@ -34,3 +34,4 @@
 2016-02-11	--	v0.8.0-stable	-- Major overhaul - no more process pool. Timeout features. TTL/retry features.. Bugfix: Don't consume more job than slot available.
 2016-02-12	--	v0.8.1	-- Bugfixes + Client Status update
 2016-02-23	--	v0.8.2	-- fix
+2016-02-23	--	v0.8.3	-- Fix
