@@ -21,7 +21,7 @@ DESC="Job Manager Client service"
 NAME=jobmanager-client
 USER=jobmanager
 DAEMON=/usr/bin/$NAME
-DAEMON_ARGS=" -t 1"
+DAEMON_ARGS=""
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
