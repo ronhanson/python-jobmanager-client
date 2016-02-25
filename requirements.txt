@@ -1,5 +1,5 @@
 tbx
-jobmanager-common >= 0.5.0
+jobmanager-common >= 0.5.2
 six >= 1.8.0
 pymongo < 3.0
 mongoengine >= 0.10.6
