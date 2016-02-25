@@ -237,8 +237,8 @@ def launch_job(job, process_number):
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     tbx.log.configure_logging("jobmanager-client-%02d" % process_number, application_name='jobmanager', settings=settings.LOG, force=True)
-    mongoengine.disconnect()
-    mongoengine.connect(host=settings.DATABASE.HOST, port=settings.DATABASE.PORT, db=settings.DATABASE.NAME, connect=False)
+
+    mongoengine.connect(host=settings.DATABASE.HOST, port=settings.DATABASE.PORT, db=settings.DATABASE.NAME)
     try:
         job.run()
         exit(0)
