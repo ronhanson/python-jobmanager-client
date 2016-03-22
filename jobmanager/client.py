@@ -60,7 +60,8 @@ class JobManagerClientService(tbx.service.Service):
         self.client.job_types = [k.__name__ for k in tbx.code.get_subclasses(Job)]
         self.client.save()
 
-        self.status_update_stopper = call_repeatedly(settings.CLIENT_STATUS_UPDATE_TIMING, self.update_client_status)
+        self.update_client_status()
+        self.status_update_stopper = call_repeatedly(settings.CLIENT.CLIENT_STATUS_UPDATE_TIMING, self.update_client_status)
 
     def update_client_status(self):
         self.client.save()
@@ -72,17 +73,17 @@ class JobManagerClientService(tbx.service.Service):
                     'type': f.fstype,
                     'device': f.device,
                     'mountpoint': f.mountpoint,
-                    'usage': psutil.disk_usage(f.mountpoint)
+                    'usage': dict(psutil.disk_usage(f.mountpoint).__dict__)
                 }
                 partitions.append(p)
         except:
             pass
 
         self_process = psutil.Process(os.getpid())
-        processes = [{'ppid' : self_process.ppid(), 'pid': self_process.pid, 'cmd': ' '.join(self_process.cmdline())}]
+        processes = [{'ppid': self_process.ppid(), 'pid': self_process.pid, 'cmd': ' '.join(self_process.cmdline())}]
         for c in self_process.children():
             try:
-                processes.append({'ppid' : c.ppid(), 'pid': c.pid, 'cmd': ' '.join(c.cmdline())})
+                processes.append({'ppid': c.ppid(), 'pid': c.pid, 'cmd': ' '.join(c.cmdline())})
             except psutil.Error:
                 pass
 
@@ -106,7 +107,7 @@ class JobManagerClientService(tbx.service.Service):
             },
             'disk': {
                 'partitions': partitions,
-                'io': psutil.disk_io_counters(perdisk=False)
+                'io': dict(psutil.disk_io_counters(perdisk=False).__dict__)
             }
         }
         status.save()
