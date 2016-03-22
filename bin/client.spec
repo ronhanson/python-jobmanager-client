@@ -4,6 +4,9 @@
     PORT = integer(default=27017)
     NAME = string(default="jobmanager")
 
+[CLIENT]
+    CLIENT_STATUS_UPDATE_TIMING = integer(default=10)
+
 [JOBS]
     AMOUNT = integer(default=4)
     MODULES = list()

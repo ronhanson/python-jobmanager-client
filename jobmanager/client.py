@@ -14,6 +14,8 @@ import tbx.service
 import tbx.settings
 from jobmanager.common.job import Job, Client, ClientStatus
 import socket
+import psutil
+import platform
 import pprint
 import logging
 import sys
@@ -58,16 +60,55 @@ class JobManagerClientService(tbx.service.Service):
         self.client.job_types = [k.__name__ for k in tbx.code.get_subclasses(Job)]
         self.client.save()
 
-        self.status_update_stopper = call_repeatedly(1, self.update_client_status)
+        self.status_update_stopper = call_repeatedly(settings.CLIENT_STATUS_UPDATE_TIMING, self.update_client_status)
 
     def update_client_status(self):
         self.client.save()
+
+        partitions = []
+        try:
+            for f in psutil.disk_partitions():
+                p = {
+                    'type': f.fstype,
+                    'device': f.device,
+                    'mountpoint': f.mountpoint,
+                    'usage': psutil.disk_usage(f.mountpoint)
+                }
+                partitions.append(p)
+        except:
+            pass
+
+        self_process = psutil.Process(os.getpid())
+        processes = [{'ppid' : self_process.ppid(), 'pid': self_process.pid, 'cmd': ' '.join(self_process.cmdline())}]
+        for c in self_process.children():
+            try:
+                processes.append({'ppid' : c.ppid(), 'pid': c.pid, 'cmd': ' '.join(c.cmdline())})
+            except psutil.Error:
+                pass
 
         status = ClientStatus()
         status.client = self.client
         status.current_jobs = [proc.job for proc in self.current_jobs]
         status.busy_slots = len(self.current_jobs)
         status.available_slots = self.available_slot
+        status.system_status = {
+            'platform': dict(platform.uname().__dict__),
+            'boot_time': psutil.boot_time(),
+            'processes': processes,
+            'cpu': {
+                'percent': psutil.cpu_percent(),
+                'percents': psutil.cpu_percent(percpu=True),
+                'stats': dict(psutil.cpu_stats().__dict__)
+            },
+            'memory': {
+                'virtual': dict(psutil.virtual_memory().__dict__),
+                'swap': dict(psutil.swap_memory().__dict__)
+            },
+            'disk': {
+                'partitions': partitions,
+                'io': psutil.disk_io_counters(perdisk=False)
+            }
+        }
         status.save()
 
     def destroy(self):
@@ -90,13 +131,13 @@ class JobManagerClientService(tbx.service.Service):
         if not amount:
             return jobs
 
-        job_found = Job.objects(status=self.pending_status).order_by('+created').modify(status=self.running_status)
+        job_found = Job.objects(status=self.pending_status).order_by('+created').modify(status=self.running_status, client_hostname=self.client.hostname, client_uuid=self.client.uuid)
         while job_found:
             nb += 1
             jobs.append(job_found)
             if nb >= amount or nb >= POOL_SIZE: #maximum of POOL_SIZE jobs at once...
                 break
-            job_found = Job.objects(status=self.pending_status).order_by('+created').modify(status=self.running_status)
+            job_found = Job.objects(status=self.pending_status).order_by('+created').modify(status=self.running_status, client_hostname=self.client.hostname, client_uuid=self.client.uuid)
         if len(jobs) > 0:
             logging.info("Found %d new jobs in database (%d slot available over %d)." % (len(jobs), self.available_slot, POOL_SIZE))
         return jobs
