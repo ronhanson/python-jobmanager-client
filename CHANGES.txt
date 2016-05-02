@@ -43,3 +43,4 @@
 2016-05-02	--	v0.9.2	-- minor fix for windows + requirements update
 2016-05-02	--	v0.9.3	-- fix
 2016-05-02	--	v0.9.4	-- Bugfix on dependencies
+2016-05-02	--	v0.9.5	-- fix
