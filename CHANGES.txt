@@ -40,3 +40,4 @@
 2016-02-25	--	v0.8.6	-- Small fix on prerm
 2016-03-22	--	v0.9.0	-- Added Client UUID and Hostname to job table + system status upload with various stats
 2016-03-22	--	v0.9.1	-- Fix
+2016-05-02	--	v0.9.2	-- minor fix for windows + requirements update
