@@ -3,4 +3,4 @@ jobmanager-common >= 0.7.1
 six >= 1.8.0
 pymongo < 3.0
 mongoengine >= 0.10.6
-psutil
+psutil >= 2.2

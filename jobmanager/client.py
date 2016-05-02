@@ -99,7 +99,7 @@ class JobManagerClientService(tbx.service.Service):
             'cpu': {
                 'percent': psutil.cpu_percent(),
                 'percents': psutil.cpu_percent(percpu=True),
-                'stats': dict(psutil.cpu_stats().__dict__)
+                'stats': dict(psutil.cpu_stats().__dict__) if hasattr(psutil, 'cpu_stats') else None
             },
             'memory': {
                 'virtual': dict(psutil.virtual_memory().__dict__),
