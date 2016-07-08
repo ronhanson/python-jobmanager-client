@@ -61,7 +61,13 @@ class JobManagerClientService(tbx.service.Service):
         self.client.save()
 
         self.update_client_status()
-        self.status_update_stopper = call_repeatedly(settings.CLIENT.CLIENT_STATUS_UPDATE_TIMING, self.update_client_status)
+
+        try:
+            client_status_update_timing = settings.CLIENT.CLIENT_STATUS_UPDATE_TIMING
+        except:
+            client_status_update_timing = 10
+
+        self.status_update_stopper = call_repeatedly(client_status_update_timing, self.update_client_status)
 
     def update_client_status(self):
         self.client.save()
