@@ -45,3 +45,5 @@
 2016-05-02	--	v0.9.4	-- Bugfix on dependencies
 2016-05-02	--	v0.9.5	-- fix
 2016-07-08	--	v0.9.6	-- Small improvement to avoid changing config with new version
+2016-07-08	--	v0.9.7	-- reworked previous commit
+2016-07-08	--	v0.9.8	-- Reworked previous commit
