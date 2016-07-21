@@ -76,6 +76,7 @@ case "$1" in
         db_stop
 
         # Add service to startup and start it...
+        /etc/init.d/jobmanager-client stop
         update-rc.d jobmanager-client defaults
         /etc/init.d/jobmanager-client start
     ;;

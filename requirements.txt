@@ -1,3 +1,4 @@
+pip
 tbx
 jobmanager-common >= 0.7.1
 six >= 1.8.0

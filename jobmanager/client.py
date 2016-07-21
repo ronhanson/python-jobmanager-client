@@ -7,6 +7,7 @@ Job Manager Client
 :author: Ronan Delacroix
 """
 import os
+import pip
 import signal
 import tbx.log
 import tbx.text
@@ -111,7 +112,12 @@ class JobManagerClientService(tbx.service.Service):
             'disk': {
                 'partitions': partitions,
                 'io': dict(psutil.disk_io_counters(perdisk=False).__dict__)
+            },
+            'python': {
+                'version': sys.version,
+                'installed_packages': sorted(["%s==%s" % (i.key, i.version) for i in pip.get_installed_distributions()])
             }
+
         }
         status.save()
 
