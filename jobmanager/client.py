@@ -96,22 +96,26 @@ class JobManagerClientService(tbx.service.Service):
         status.current_jobs = [proc.job for proc in self.current_jobs]
         status.busy_slots = len(self.current_jobs)
         status.available_slots = self.available_slot
+
+        def safe_dict(func, **kwargs):
+            return dict(func().__dict__) if func and hasattr(func(**kwargs), '__dict__') else None
+
         status.system_status = {
-            'platform': dict(platform.uname().__dict__),
+            'platform': safe_dict(platform.uname),
             'boot_time': psutil.boot_time(),
             'processes': processes,
             'cpu': {
                 'percent': psutil.cpu_percent(),
                 'percents': psutil.cpu_percent(percpu=True),
-                'stats': dict(psutil.cpu_stats().__dict__) if hasattr(psutil, 'cpu_stats') else None
+                'stats': safe_dict(psutil.cpu_stats)
             },
             'memory': {
-                'virtual': dict(psutil.virtual_memory().__dict__),
-                'swap': dict(psutil.swap_memory().__dict__)
+                'virtual': safe_dict(psutil.virtual_memory),
+                'swap': safe_dict(psutil.swap_memory)
             },
             'disk': {
                 'partitions': partitions,
-                'io': dict(psutil.disk_io_counters(perdisk=False).__dict__)
+                'io': safe_dict(psutil.disk_io_counters, perdisk=False)
             },
             'python': {
                 'version': sys.version,
