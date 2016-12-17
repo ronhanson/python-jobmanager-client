@@ -9,8 +9,10 @@ Job Manager Client
 import os
 import pip
 import signal
+import tbx
 import tbx.log
 import tbx.text
+import tbx.process
 import tbx.service
 import tbx.settings
 from jobmanager.common.job import Job, Client, ClientStatus
@@ -20,6 +22,7 @@ import platform
 import pprint
 import logging
 import sys
+import atexit
 import traceback
 from threading import Event, Thread
 import mongoengine
@@ -31,16 +34,6 @@ import time
 settings = tbx.settings.from_file('client', application_name='jobmanager')
 POOL_SIZE = settings.JOBS.AMOUNT
 
-
-def call_repeatedly(interval, func, *args):
-    stopped = Event()
-
-    def loop():
-        while not stopped.wait(interval): # the first call is in `interval` secs
-            func(*args)
-
-    Thread(target=loop).start()
-    return stopped.set
 
 class JobManagerClientService(tbx.service.Service):
     """
@@ -59,13 +52,22 @@ class JobManagerClientService(tbx.service.Service):
         self.client.pid = os.getpid()
         self.client.pool_size = POOL_SIZE
         self.client.job_types = [k.__name__ for k in tbx.code.get_subclasses(Job)]
+        self.client.platform = tbx.code.safe_dict(platform.uname)
+        self.client.boot_time = datetime.fromtimestamp(psutil.boot_time())
+        self.client.python_version = sys.version.split(' ')[0]
+        self.client.python_packages = sorted(["%s==%s" % (i.key, i.version) for i in pip.get_installed_distributions()])
+
         self.client.save()
+
+        self.client_status_index = 0
 
         self.update_client_status()
 
         client_status_update_timing = settings.CLIENT.CLIENT_STATUS_UPDATE_TIMING or 10
 
-        self.status_update_stopper = call_repeatedly(client_status_update_timing, self.update_client_status)
+        self.status_update_thread, self.status_update_stopper,  = tbx.process.call_repeatedly(self.update_client_status, client_status_update_timing)
+
+        self.log_info("Service setup complete.")
 
     def update_client_status(self):
         self.client.save()
@@ -73,14 +75,17 @@ class JobManagerClientService(tbx.service.Service):
         partitions = []
         try:
             for f in psutil.disk_partitions():
+                usage = psutil.disk_usage(path=f.mountpoint)
                 p = {
                     'type': f.fstype,
                     'device': f.device,
                     'mountpoint': f.mountpoint,
-                    'usage': dict(psutil.disk_usage(f.mountpoint).__dict__)
+                    'total': usage.total,
+                    'used': usage.used,
+                    'percent': usage.percent,
                 }
                 partitions.append(p)
-        except:
+        except Exception as e:
             pass
 
         self_process = psutil.Process(os.getpid())
@@ -91,47 +96,49 @@ class JobManagerClientService(tbx.service.Service):
             except psutil.Error:
                 pass
 
+        self.client_status_index += 1
+
         status = ClientStatus()
+        status.index = self.client_status_index
         status.client = self.client
         status.current_jobs = [proc.job for proc in self.current_jobs]
-        status.busy_slots = len(self.current_jobs)
-        status.available_slots = self.available_slot
 
-        def safe_dict(func, **kwargs):
-            return dict(func().__dict__) if func and hasattr(func(**kwargs), '__dict__') else None
+        cpu_status = psutil.cpu_stats()
+        virtual_memory = psutil.virtual_memory()
+        swap_memory = psutil.swap_memory()
 
         status.system_status = {
-            'platform': safe_dict(platform.uname),
-            'boot_time': psutil.boot_time(),
             'processes': processes,
             'cpu': {
                 'percent': psutil.cpu_percent(),
                 'percents': psutil.cpu_percent(percpu=True),
-                'stats': safe_dict(psutil.cpu_stats)
+                'interrupts': cpu_status.interrupts,
+                'soft_interrupts': cpu_status.soft_interrupts,
             },
             'memory': {
-                'virtual': safe_dict(psutil.virtual_memory),
-                'swap': safe_dict(psutil.swap_memory)
+                'virtual': {
+                    'total': virtual_memory.total,
+                    'used': virtual_memory.used,
+                    'percent': virtual_memory.percent,
+                },
+                'swap': {
+                    'total': swap_memory.total,
+                    'used': swap_memory.used,
+                    'percent': swap_memory.percent,
+                },
             },
-            'disk': {
-                'partitions': partitions,
-                'io': safe_dict(psutil.disk_io_counters, perdisk=False)
-            },
-            'python': {
-                'version': sys.version,
-                'installed_packages': sorted(["%s==%s" % (i.key, i.version) for i in pip.get_installed_distributions()])
-            }
-
+            'disk': partitions,
+            #'disk_io': safe_dict(psutil.disk_io_counters, perdisk=False)
         }
         status.save()
 
     def destroy(self):
-        logging.warning("Destroying service %s" % self.service_name)
-        self.status_update_stopper()
+        self.log_warning("Destroying service %s" % self.service_name)
+        #self.status_update_stopper()
         for proc in self.current_jobs:
             proc.terminate()
             proc.join()
-        logging.info("Processes terminated.")
+        self.log_info("Processes terminated.")
         return None
 
     def find_some_jobs(self):
@@ -153,7 +160,7 @@ class JobManagerClientService(tbx.service.Service):
                 break
             job_found = Job.objects(status=self.pending_status).order_by('+created').modify(status=self.running_status, client_hostname=self.client.hostname, client_uuid=self.client.uuid)
         if len(jobs) > 0:
-            logging.info("Found %d new jobs in database (%d slot available over %d)." % (len(jobs), self.available_slot, POOL_SIZE))
+            self.log_info("Found %d new jobs in database (%d slot available over %d)." % (len(jobs), self.available_slot, POOL_SIZE))
         return jobs
 
     @property
@@ -162,7 +169,7 @@ class JobManagerClientService(tbx.service.Service):
 
     def check_current_jobs(self):
         initial_amount = len(self.current_jobs)
-        #logging.debug("Checking current job status : there was %d jobs running," % (initial_amount))
+        #logging.debug("Checking current job status : there was %d jobs running," % (initial_amount), extra=self.extra_log_arguments)
 
         for proc in list(self.current_jobs): #iterate over copy of the list (to be able to remove)
             try:
@@ -172,14 +179,14 @@ class JobManagerClientService(tbx.service.Service):
                 job.reload()
                 if job.timeout and job.started:
                     if datetime.utcnow() > (job.started + timedelta(seconds=job.timeout)):
-                        logging.error("Job %s (pid : %d) Timeout" % (job.uuid, proc.pid))
+                        self.log_error("Job %s (pid : %d) Timeout" % (job.uuid, proc.pid))
                         proc.terminate()
                         proc.join()
-                        logging.error("Job %s terminated." % job.uuid)
+                        self.log_error("Job %s terminated." % job.uuid)
 
                 if not proc.is_alive():
                     proc.join(1)
-                    logging.info("Job %s was found finished. Exit code : %d" % (job.uuid, proc.exitcode))
+                    self.log_info("Job %s was found finished. Exit code : %d" % (job.uuid, proc.exitcode))
                     if proc.exitcode == 0:
                         proc.callback_success()
                     else:
@@ -187,7 +194,7 @@ class JobManagerClientService(tbx.service.Service):
 
                     #check job status and TTL
                     if job.status == 'error' and job.ttl > 1:
-                        logging.info("Job %s has TTL of %d, creating a duplicated job to retry it." % (job.uuid, job.ttl))
+                        self.log_info("Job %s has TTL of %d, creating a duplicated job to retry it." % (job.uuid, job.ttl))
                         from copy import deepcopy
                         new_job = deepcopy(job)
                         new_job.id = None
@@ -200,8 +207,8 @@ class JobManagerClientService(tbx.service.Service):
                         new_job.details = "Job retried! New job created from job %s" % job.uuid
                         new_job.history = []
                         new_job.save()
-                        logging.info("New job %s created... Set to be retried!" % (new_job.uuid))
-                        logging.info("Now sleeping a bit to let other job manager have a chance to get that new job...")
+                        self.log_info("New job %s created... Set to be retried!" % (new_job.uuid))
+                        self.log_info("Now sleeping a bit to let other job manager have a chance to get that new job...")
                         time.sleep(self.loop_duration*1.05)
 
                     if proc in self.current_jobs:
@@ -210,13 +217,13 @@ class JobManagerClientService(tbx.service.Service):
             except AssertionError:
                 continue
         if initial_amount != len(self.current_jobs):
-            logging.info("Cleaning current job list: there was %d jobs running, now %d are running." % (initial_amount, len(self.current_jobs)))
+            self.log_info("Cleaning current job list: there was %d jobs running, now %d are running." % (initial_amount, len(self.current_jobs)))
 
     def run(self):
         """
         Run method (launched every few seconds)
         """
-        #logging.debug("Run %s with %d processes, %d busy (debug:%s)" % (self.service_name, POOL_SIZE, len(self.current_jobs), self.debug))
+        #self.log_debug("Run %s with %d processes, %d busy (debug:%s)" % (self.service_name, POOL_SIZE, len(self.current_jobs), self.debug))
 
         # Clean current jobs
         self.check_current_jobs()
@@ -239,7 +246,7 @@ class JobManagerClientService(tbx.service.Service):
         """
         Method used to launch a job in a separate process
         """
-        logging.info('Found one job with status %s. Launching processing...' % job.status)
+        self.log_info('Found one job with status %s. Launching processing...' % job.status)
 
         process_number = self.process_number_list.pop(0)
 
@@ -252,7 +259,7 @@ class JobManagerClientService(tbx.service.Service):
             except:
                 pass
             job.reload()
-            logging.debug("Job %s success callback : %s" % (job.uuid, job.status))
+            self.log_debug("Job %s success callback : %s" % (job.uuid, job.status))
             if job.status not in ['success', 'error']:
                 job.save_as_successful()
 
@@ -262,7 +269,8 @@ class JobManagerClientService(tbx.service.Service):
                 self.process_number_list.append(process_number)
             except:
                 pass
-            logging.error("Job %s ERROR callback" % (job.uuid))
+
+            self.log_error("Job %s ERROR callback" % (job.uuid))
             job.reload()
             if job.status != 'error':
                 job.details = "Error (callback) : exitcode=%s" % str(exitcode)
@@ -282,6 +290,34 @@ class JobManagerClientService(tbx.service.Service):
         self.current_jobs.append(proc)
         return
 
+    @property
+    def extra_log_arguments(self):
+        return {
+            'client_hostname': self.client.hostname,
+            'client_uuid': self.client.uuid,
+        }
+
+    def log_debug(self, text):
+        logging.debug("%s - %s" % (self, text), extra=self.extra_log_arguments)
+
+    def log_info(self, text):
+        logging.info("%s - %s" % (self, text), extra=self.extra_log_arguments)
+
+    def log_warning(self, text):
+        logging.warning("%s - %s" % (self, text), extra=self.extra_log_arguments)
+
+    def log_error(self, text):
+        logging.error("%s - %s" % (self, text), extra=self.extra_log_arguments)
+
+    def log_exception(self, text):
+        logging.exception("%s - %s" % (self, text), extra=self.extra_log_arguments)
+
+    def __str__(self):
+        return "JobManagerClient %s @ %s" % (self.client.uuid, self.client.hostname)
+
+    def __repr__(self):
+        return self.__str__()
+
 
 def launch_job(job, process_number):
     """
@@ -297,8 +333,7 @@ def launch_job(job, process_number):
     try:
         job.run()
         exit(0)
-    except Exception as e:
-        logging.error("Error while running job %s" % job.uuid)
-        logging.exception(e)
+    except Exception:
+        logging.exception("Error while running job %s" % job.uuid, extra={'job_uuid': job.uuid, 'client_uuid': job.client_uuid, 'client_hostname': socket.gethostname()})
         exit(1)
 

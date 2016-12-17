@@ -59,12 +59,15 @@ case "$1" in
         # Now configure the ini file using answers...
         db_get jobmanager-client/dbhost
         sed -i -e "/^\[DATABASE\]/,/^\[.*\]/ s|^\([ \t]*HOST[ \t]*=[ \t]*\).*$|\1\"${RET}\"|" ${JM_CONF}
+        sed -i -e "/^\[LOG\]/,/^\[.*\]/ s|^\([ \t]*LOGGING_MONGO_HOST[ \t]*=[ \t]*\).*$|\1\"${RET}\"|" ${JM_CONF}
 
         db_get jobmanager-client/dbport
         sed -i -e "/^\[DATABASE\]/,/^\[.*\]/ s|^\([ \t]*PORT[ \t]*=[ \t]*\).*$|\1${RET}|" ${JM_CONF}
+        sed -i -e "/^\[LOG\]/,/^\[.*\]/ s|^\([ \t]*LOGGING_MONGO_PORT[ \t]*=[ \t]*\).*$|\1\"${RET}\"|" ${JM_CONF}
 
         db_get jobmanager-client/dbname
         sed -i -e "/^\[DATABASE\]/,/^\[.*\]/ s|^\([ \t]*NAME[ \t]*=[ \t]*\).*$|\1\"${RET}\"|" ${JM_CONF}
+        sed -i -e "/^\[LOG\]/,/^\[.*\]/ s|^\([ \t]*LOGGING_MONGO_DATABASE[ \t]*=[ \t]*\).*$|\1\"${RET}\"|" ${JM_CONF}
 
         db_get jobmanager-client/amount
         sed -i -e "/^\[JOBS\]/,/^\[.*\]/ s|^\([ \t]*AMOUNT[ \t]*=[ \t]*\).*$|\1${RET}|" ${JM_CONF}

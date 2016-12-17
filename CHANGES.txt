@@ -49,3 +49,4 @@
 2016-07-08	--	v0.9.8	-- Reworked previous commit
 2016-07-21	--	v0.9.9	-- Small improvments
 2016-09-29	--	v0.9.10	-- Fixes for mac
+2016-12-17	--	v0.10.0	-- Numerous enhancements, new status, new logging, etc.
