@@ -52,3 +52,4 @@
 2016-12-17	--	v0.10.0	-- Numerous enhancements, new status, new logging, etc.
 2016-12-17	--	v0.10.1	-- Debian package requirements
 2016-12-23	--	v0.10.2	-- Packaging fix
+2016-12-23	--	v0.10.3	-- Fix on debian packaging
