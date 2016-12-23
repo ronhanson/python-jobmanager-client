@@ -53,3 +53,4 @@
 2016-12-17	--	v0.10.1	-- Debian package requirements
 2016-12-23	--	v0.10.2	-- Packaging fix
 2016-12-23	--	v0.10.3	-- Fix on debian packaging
+2016-12-23	--	v0.10.4	-- Fix on psutil.cpu_stat not know on linux version

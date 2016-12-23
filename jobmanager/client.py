@@ -103,7 +103,6 @@ class JobManagerClientService(tbx.service.Service):
         status.client = self.client
         status.current_jobs = [proc.job for proc in self.current_jobs]
 
-        cpu_status = psutil.cpu_stats()
         virtual_memory = psutil.virtual_memory()
         swap_memory = psutil.swap_memory()
 
@@ -111,9 +110,7 @@ class JobManagerClientService(tbx.service.Service):
             'processes': processes,
             'cpu': {
                 'percent': psutil.cpu_percent(),
-                'percents': psutil.cpu_percent(percpu=True),
-                'interrupts': cpu_status.interrupts,
-                'soft_interrupts': cpu_status.soft_interrupts,
+                'percents': psutil.cpu_percent(percpu=True)
             },
             'memory': {
                 'virtual': {
