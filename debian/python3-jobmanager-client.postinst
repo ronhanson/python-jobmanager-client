@@ -78,10 +78,13 @@ case "$1" in
         # Finished with DebConf database...
         db_stop
 
+        set +e
         # Add service to startup and start it...
         /etc/init.d/jobmanager-client stop
         update-rc.d jobmanager-client defaults
         /etc/init.d/jobmanager-client start
+        set -e
+        exit 0
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

@@ -51,3 +51,4 @@
 2016-09-29	--	v0.9.10	-- Fixes for mac
 2016-12-17	--	v0.10.0	-- Numerous enhancements, new status, new logging, etc.
 2016-12-17	--	v0.10.1	-- Debian package requirements
+2016-12-23	--	v0.10.2	-- Packaging fix
