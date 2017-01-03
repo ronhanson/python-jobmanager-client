@@ -55,3 +55,4 @@
 2016-12-23	--	v0.10.3	-- Fix on debian packaging
 2016-12-23	--	v0.10.4	-- Fix on psutil.cpu_stat not know on linux version
 2016-12-23	--	v0.10.5	-- Deb packaging fix
+2017-01-03	--	v0.10.6	-- Fixes and logging enhancements.

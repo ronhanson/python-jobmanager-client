@@ -55,7 +55,7 @@ class JobManagerClientService(tbx.service.Service):
         self.client.platform = tbx.code.safe_dict(platform.uname)
         self.client.boot_time = datetime.fromtimestamp(psutil.boot_time())
         self.client.python_version = sys.version.split(' ')[0]
-        self.client.python_packages = sorted(["%s==%s" % (i.key, i.version) for i in pip.get_installed_distributions()])
+        self.client.python_packages = sorted(["%s (%s)" % (i.key, i.version) for i in pip.get_installed_distributions(local_only=False)])
 
         self.client.save()
 
