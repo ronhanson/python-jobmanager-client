@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 # vim: ai ts=4 sts=4 et sw=4 nu
 """
-(c) 2015 Ronan Delacroix
-Job Manager sub module
+(c) 2014-2017 Ronan Delacroix
+Job Manager 
 :author: Ronan Delacroix
 """
 import pkgutil

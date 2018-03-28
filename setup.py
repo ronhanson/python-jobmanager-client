@@ -10,11 +10,6 @@ requirements = [r.strip() for r in open('requirements.txt').readlines() if not r
 requirements = [r if ('git+' not in r) else re.sub(r".*egg=(.*)", r"\1", r).strip() for r in requirements]
 
 data_files = []
-if platform.system() != "Windows":
-    data_files = [
-        ('/etc/jobmanager', ['bin/client.ini', 'bin/client.spec']),
-        ('/var/log/jobmanager', [])
-    ]
 
 setup(
     name='jobmanager-client',
@@ -42,7 +37,7 @@ setup(
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: POSIX',
         'Operating System :: Microsoft :: Windows',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 3',
     ],
 )

@@ -2,55 +2,207 @@
 # -*- coding: utf-8 -*-
 # vim: ai ts=4 sts=4 et sw=4 nu
 """
-(c) 2014 Ronan Delacroix
-Job Manager Utility - Main File
+(c) 2014-2017 Ronan Delacroix
+Job Manager Client - Main File
 :author: Ronan Delacroix
 """
 import os
+import six
 import sys
 import time
-import argparse
+import configargparse
 import jobmanager
 import jobmanager.client
+import jobmanager.common
+import jobmanager.common.host
 import mongoengine
 import tbx
+import tbx.process
 import tbx.service
-import tbx.settings
 import tbx.log
+import tbx.network
 import logging
-
-settings = tbx.settings.from_file('client', application_name='jobmanager')
-tbx.log.configure_logging("jobmanager-client", application_name='jobmanager', settings=settings.LOG)
+import signal
 
 
-def import_from_name(module_name):
-    globals()[module_name] = __import__(module_name)
+class RestartSignal(Exception):
+    pass
 
 
-def main():
+def configure_logging(verbosity, quiet=False, log_file=None, db_host=None, db_port=27017, db_name="jobmanager"):
+    logging.logThreads = False
+
+    logger = logging.getLogger()
+
+    for handler in logger.handlers:
+        logger.removeHandler(handler)
+
+    logger.setLevel(verbosity)
+
+    if not quiet:
+        tbx.log.add_screen_logging(logger)
+
+    if log_file:
+        tbx.log.add_logging_file_handler(logger, log_file)
+
+    if db_host:
+        tbx.log.add_mongo_logging(logger, 'jobmanager-client', 'jobmanager', {
+            'LOGGING_MONGO_HOST': db_host,
+            'LOGGING_MONGO_PORT': db_port,
+            'LOGGING_MONGO_DATABASE': db_name,
+            'LOGGING_MONGO_COLLECTION': "job_logs",
+            'LOGGING_MONGO_CAPPED': True,
+            'LOGGING_MONGO_CAPPED_MAX': 2000000,
+            'LOGGING_MONGO_CAPPED_SIZE': 512000000,
+            'LOGGING_MONGO_BUFFER_SIZE': 20,
+            'LOGGING_MONGO_BUFFER_FLUSH_TIMER': 5.0
+        })
+    return logger
+
+
+def run(db_host, db_port, db_name, job_imports, job_slots, log_file=None):
+
+    # Bind restart signal
+    def restart_app(sig, stack):
+        raise RestartSignal()
+
+    signal.signal(signal.SIGUSR1, restart_app)
+    signal.signal(signal.SIGUSR2, restart_app)
+
+    # Main safety loop
     while True:
         try:
-            mongoengine.connect(host=settings.DATABASE.HOST, port=settings.DATABASE.PORT, db=settings.DATABASE.NAME)
 
-            for mod in settings.JOBS.MODULES:
-                try:
-                    import_from_name(mod)
-                except ImportError:
-                    logging.error("Can't import Job module '%s' as defined in settings. Exiting." % mod)
-                    exit(1)
+            logging.info("Starting JobManagerClient service...")
 
-            result = tbx.service.launch_service(service=jobmanager.client.JobManagerClientService)
+            service = jobmanager.client.JobManagerClientService(
+                db_host=db_host,
+                db_port=db_port,
+                db_name=db_name,
+                imports=job_imports,
+                slots=job_slots,
+                log_file=log_file
+            )
+            result = service.loop()
 
-            #everything went normal
+            # everything went normal
+            logging.info("Exiting %s service (result = %s)." % (service.service_name, result))
+            service.destroy()
             exit(result)
-        except mongoengine.ConnectionError:
-            logging.exception("Database connection error to %s. Waiting 10 seconds for retry..." % settings.DATABASE.HOST)
+        except mongoengine.connection.MongoEngineConnectionError:
+            logging.error("Database connection error to %s. Waiting 10 seconds for retry..." % db_host)
             time.sleep(10)
+        except jobmanager.common.ConfigurationException as e:
+            logging.error(e)
+            logging.error("Waiting 10 seconds before retry...")
+            time.sleep(10)
+        except RestartSignal:
+            logging.warning("Restart signal received ! Reloading configuration from database, restarting  in 2 seconds.")
+            time.sleep(2)
         except Exception as e:
             logging.exception("Unknown Error (%s). Waiting 10 seconds for retry..." % str(e))
             time.sleep(10)
 
+    return
+
+
+def get_version():
+    """
+    Retrieves the version number
+    """
+    try:
+        return open(os.path.join(os.path.dirname(os.path.abspath(jobmanager.client.__file__)), '..', 'VERSION.txt')).read().strip()
+    except:
+        print('Error - Unable to retrieve version number...')
+        exit(1)
+
+
+def main():
+    parser = configargparse.ArgParser(
+        description="""Job Manager Client""",
+        epilog='"According to this program calculations, there is no such things as too much wine."',
+        config_file_parser_class=configargparse.YAMLConfigFileParser,
+        formatter_class=configargparse.ArgumentDefaultsHelpFormatter,
+        default_config_files=['/etc/jobmanager/client.yaml', './client.yaml'],
+        ignore_unknown_config_file_keys=True,
+        add_env_var_help=True,
+        auto_env_var_prefix='JOBMANAGER_CLIENT_',
+        add_config_file_help=True,
+        add_help=False
+    )
+
+    database_group = parser.add_argument_group('Job Database')
+    database_group.add_argument('-s', '--server', help='Address of the MongoDB database server containing jobs.', required=True, env_var='JOBMANAGER_DATABASE_HOST')
+    database_group.add_argument('-p', '--port', type=int, default=27017, help='Port to connect the MongoDB database.', env_var='JOBMANAGER_DATABASE_PORT')
+    database_group.add_argument('-d', '--database', default="jobmanager", help='Database name containing jobs.', env_var='JOBMANAGER_DATABASE_NAME')
+
+    slots_group = parser.add_argument_group('Slots & Imports options')
+    slots_group.add_argument('-t', '--slots', metavar='JobType', type=str, nargs='+', default='AUTO',
+                             help='Subscribe the current host to one or multiple job type. Use "MyJob==2" '
+                                  'to add 2 slots for MyJob type of job. Needs to be written once only. '
+                                  'If set to AUTO, each known imported job will have its default amount of slots.')
+    slots_group.add_argument('-i', '--imports', metavar='module', type=str, nargs='+', required=True,
+                             help='Configure current host to import one or multiple python module at startup. '
+                                  'Should not be empty.')
+
+    log_group = parser.add_argument_group('Log output')
+    log_group.add_argument('-l', '--log-file', type=configargparse.FileType('w'), default=None, help='Optionally log to file.')
+    log_group.add_argument('-q', '--quiet', action="store_true", default=False, help='Do not output on screen.')
+    log_group.add_argument('-v', '--verbosity', default="INFO", help='Log verbosity to screen.',
+                           choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'])
+
+    config_group = parser.add_argument_group('Config file')
+    config_group.add_argument("-c", "--config-file", dest="config_file",
+                              help="config file path", is_config_file_arg=True)
+    config_group.add_argument('--create-config-file', metavar="CONFIG_OUTPUT_PATH",
+                              help="takes the current command line "
+                                   "args and writes them out to a config file at the given path, then "
+                                   "exits", is_write_out_config_file_arg=True)
+
+    misc_group = parser.add_argument_group('Miscellaneous commands')
+    misc_group.add_argument("-h", "--help", action="help", help="show this help message and exit.")
+    misc_group.add_argument('--version', action='version', version='%(prog)s {version}'.format(version=get_version()), env_var=None)
+
+    args = vars(parser.parse_args())
+
+    # Logging setup
+    log_file = os.path.abspath(args.get('log_file').name) if args.get('log_file') else None
+    configure_logging(
+        args.get('verbosity'),
+        quiet=args.get('quiet'),
+        log_file=log_file,
+        db_host=args.get('server'),
+        db_port=int(args.get('port')),
+        db_name=args.get('database')
+    )
+
+    # Job Slots parsing
+    if args.get('slots') == 'AUTO':
+        job_slots = None
+    else:
+        job_slots = {}
+        for k in args.get('slots'):
+            sk = k.split('==')
+            job_type = sk[0]
+            amount = 1
+            if len(sk) == 2:
+                amount = int(sk[1])
+            if job_type in job_slots:
+                job_slots[job_type] += amount
+            else:
+                job_slots[job_type] = amount
+
+    # Run boy run
+    run(
+        db_host=args.get('server'),
+        db_port=int(args.get('port')),
+        db_name=args.get('database'),
+        job_imports=args.get('imports'),
+        job_slots=job_slots,
+        log_file=log_file
+    )
     exit(0)
+
 
 if __name__ == "__main__":
     main()
