@@ -156,6 +156,9 @@ def main():
     os.system('git add CHANGES.txt')
     print('CHANGES.txt updated.')
 
+    os.system('git tag "v%s"' % new_version)
+    print('Git tag "v%s" added' % new_version)
+
     print('Pre-Commit Done.')
 
     sys.stdin = stdin_old
