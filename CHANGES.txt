@@ -59,3 +59,4 @@
 2017-01-09	--	v0.10.7	-- Small fixes on requirements
 2018-03-28	--	v0.13.0	-- Big refactoring. New command line based configuration, with env and file setting capabilities. Also allows slots control and imports. Works with Docker now.
 2018-04-16	--	v0.13.1	-- Added template for testing
+2018-04-17	--	v0.13.2	-- Added coveralls feature
