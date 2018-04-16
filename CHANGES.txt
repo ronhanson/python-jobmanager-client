@@ -67,3 +67,4 @@
 2018-04-17	--	v0.13.7	-- test travis build
 2018-04-17	--	v0.13.8	-- Test travis CI build
 2018-04-17	--	v0.13.9	-- Testing travis CI build
+2018-04-17	--	v0.13.10	-- Testing Travis CI
