@@ -1,28 +1,32 @@
 sudo: false
-
 language: python
-
 python:
-  - "2.7"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "3.6"
-
+- '2.7'
+- '3.3'
+- '3.4'
+- '3.5'
+- '3.6'
 cache: pip
 install:
-  - pip install -r requirements.txt
-  - pip install -e .
-  - pip install pytest pytest-cov coveralls
+- pip install -r requirements.txt
+- pip install -e .
+- pip install pytest pytest-cov coveralls
 script:
-  - py.test --cov-report term-missing --cov=jobmanager -v
-
+- py.test --cov-report term-missing --cov=jobmanager -v
+deploy:
+  provider: pypi
+  user: ronan.delacroix
+  password:
+    secure: Q3LRaHgNMHExVGaeOG5cqPh1bVf/R9cuMgh4paPvU2sU3hWgdfrfi1NoYiy9DxPNArsFq9ccDl6bOHdbp4opXRrYGj7d4Kovi33CLBpemriUzOC5l0ir/WSM3VyUiGOLClq9NToy/mRKDC/Y0uxomwoKZ/Vmg4SNqbt8LL3j6V4Wg4TlMtheevjHEVF62mLTBp9BQJs3qGEMN2h8fTxaV09tgQ4Tx7jwJ6GLDSkgKqmMWOfWOiR66U85QLQaoWVIvUV4ALGpmieYMvKvjVCEAMMgiLllX+wczL2H/xPL2s9h5NZ2wmwr1BnDItSAlKtQDTY56Ohp1PMsINHtG6EwtTZJOf2l75wkK1RALLHf2+dxkCA3tsjaxXLHWifHrju5kh3afocM3m9lAlpy/pCvkDuEC7K0/ssQTPy34pI7CApgfYN1Tso9N5I2tzaEVd9Pfl+WMv5Iv2JVvaugCx2iCCxyq/o8pKMDvB6WugNwXEGVdsPRF6TuyAHURjFUcs84nwYZ2dQ3e1C637JDfDlkq5GO3+JITXoiSTBIQdnhvMnUz/4eDNcfd1x0FtArCyc9IN7IdA64UDi8Ezw7uLekAxxmZiNXciPF9vSZaEhjZmXZ93lEK1d42MuAIKXrSPMNgFWiyHlNMdEdJyF4JCT7XTOPrTv52n/V6lywBIZ2NW0=
+  distributions: sdist bdist_wheel
+  on:
+    tags: true
+    python: 3.6
 after_success:
-    - coveralls
-
+- coveralls
 notifications:
   email:
     recipients:
-      - ronan.delacroix+travis@gmail.com
+    - ronan.delacroix+travis@gmail.com
     on_success: always
     on_failure: always
