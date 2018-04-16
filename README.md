@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/ronhanson/python-jobmanager-client.svg?branch=master)](https://travis-ci.org/ronhanson/python-jobmanager-client)
+[![Coverage Status](https://coveralls.io/repos/github/ronhanson/python-jobmanager-client/badge.svg?branch=master)](https://coveralls.io/github/ronhanson/python-jobmanager-client?branch=master)
+
 Job Manager Client
 ==================
 
