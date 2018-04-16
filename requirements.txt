@@ -1,4 +1,2 @@
 jobmanager-common >= 0.13.1
-pip >= 9.0
-psutil >= 2.2
 configargparse >= 0.13
