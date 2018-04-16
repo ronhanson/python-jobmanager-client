@@ -62,3 +62,4 @@
 2018-04-17	--	v0.13.2	-- Added coveralls feature
 2018-04-17	--	v0.13.3	-- Added PyPI Travis build
 2018-04-17	--	v0.13.4	-- Changed git hook to add a git tag when commiting
+2018-04-17	--	v0.13.5	-- Added minor enhancement to travis build
