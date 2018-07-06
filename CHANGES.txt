@@ -69,3 +69,4 @@
 2018-04-17	--	v0.13.9	-- Testing travis CI build
 2018-04-17	--	v0.13.10	-- Testing Travis CI
 2018-04-17	--	v0.13.11	-- Added badges to README: travis and coverage
+2018-07-06	--	v0.13.12	-- Fixed VERSION file not installed on windows builgs

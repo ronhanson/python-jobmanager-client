@@ -111,7 +111,7 @@ def get_version():
     Retrieves the version number
     """
     try:
-        return open(os.path.join(os.path.dirname(os.path.abspath(jobmanager.client.__file__)), '..', 'VERSION.txt')).read().strip()
+        return open(os.path.join(os.path.dirname(os.path.abspath(jobmanager.client.__file__)), 'CLIENT.VERSION.txt')).read().strip()
     except:
         print('Error - Unable to retrieve version number...')
         exit(1)

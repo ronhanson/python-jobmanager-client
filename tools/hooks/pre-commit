@@ -11,6 +11,7 @@ import os
 import os.path
 import six
 import re
+import shutil
 from datetime import date
 
 if six.PY3:
@@ -148,6 +149,8 @@ def main():
     with open('VERSION.txt', 'w') as f:
         f.write(new_version)
     os.system('git add VERSION.txt')
+    shutil.copy('VERSION.txt', 'jobmanager/CLIENT.VERSION.txt')
+    os.system('git add jobmanager/CLIENT.VERSION.txt')
     print('VERSION.txt updated.')
 
     with open('CHANGES.txt', 'a') as f:

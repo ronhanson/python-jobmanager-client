@@ -2,6 +2,7 @@ from setuptools import setup, find_packages
 import os
 import re
 import platform
+import shutil
 
 if os.environ.get('USER', '') == 'vagrant':
     del os.link
@@ -11,16 +12,18 @@ requirements = [r if ('git+' not in r) else re.sub(r".*egg=(.*)", r"\1", r).stri
 
 data_files = []
 
+shutil.copy('VERSION.txt', 'jobmanager/CLIENT.VERSION.txt')
+
 setup(
     name='jobmanager-client',
-    version=open('VERSION.txt').read().strip(),
+    version=open('jobmanager/CLIENT.VERSION.txt').read().strip(),
     author='Ronan Delacroix',
     author_email='ronan.delacroix@gmail.com',
     url='https://github.com/ronhanson/python-jobmanager-client',
     packages=find_packages(where='.', exclude=["fabfile", "tools", "*.tests", "*.tests.*", "tests.*", "tests"]) + ['jobmanager'],
-    package_data={ 'jobmanager': ['jobmanager/*.py'] },
+    #package_data={ 'jobmanager': ['jobmanager/*.py'] },
     scripts=['bin/jobmanager-client'],
-    data_files=data_files,
+    #data_files=data_files,
     license=open('LICENCE.txt').read().strip(),
     description='Job Manager Client',
     long_description=open('README.md').read().strip(),
