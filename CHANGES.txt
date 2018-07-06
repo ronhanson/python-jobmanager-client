@@ -71,3 +71,4 @@
 2018-04-17	--	v0.13.11	-- Added badges to README: travis and coverage
 2018-07-06	--	v0.13.12	-- Fixed VERSION file not installed on windows builgs
 2018-07-06	--	v0.13.13	-- Fix
+2018-07-06	--	v0.13.14	-- Windows fix
