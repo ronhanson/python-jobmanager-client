@@ -23,6 +23,7 @@ import tbx.log
 import tbx.network
 import logging
 import signal
+import platform
 
 
 class RestartSignal(Exception):
