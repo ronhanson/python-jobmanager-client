@@ -61,6 +61,52 @@ def configure_logging(verbosity, quiet=False, log_file=None, db_host=None, db_po
     return logger
 
 
+def execute_json(db_host, db_port, db_name, json_data, imports):
+
+    try:
+        import json
+
+        def find_job_type(job_type, modules=None):
+            cls = None
+            common.safely_import_from_name(modules)
+            try:
+                cls = mongoengine.base.common.get_document(job_type)
+            except mongoengine.errors.NotRegistered:
+                pass
+
+            if not cls:
+                raise Exception("Job type '%s' is unknown %s." % (job_type, additionnal_error_info))
+
+            return cls
+
+        logging.info("Starting debug json execution...")
+
+        mongoengine.connect(host=db_host, port=db_port, db=db_name)
+
+        data = json.loads(json_data)
+        job_type = "Job." + data.pop('type', None)
+        if not job_type:
+            raise Exception("Job has no 'type' field or is not set (value='%s')." % type)
+        cls = find_job_type(job_type, modules=imports)
+
+        new_data = jobmanager.common.change_keys(data, jobmanager.common.replace_type_cls)
+        new_job = cls.from_json(tbx.text.render_json(new_data))
+        new_job.status = 'new'
+        new_job.save()
+        logging.info("New Job created : " + str(new_job))
+
+        logging.info("Running Job " + str(new_job))
+        new_job.run()
+
+        logging.info("Exiting debug json execution.")
+    except mongoengine.connection.MongoEngineConnectionError:
+        logging.error("Database connection error to %s - %s." % (db_host, e))
+    except Exception as e:
+        logging.exception("Unknown Error %s" % str(e))
+
+    exit(0)
+
+
 def run(db_host, db_port, db_name, job_imports, job_slots, log_file=None):
 
     # Bind restart signal
@@ -161,9 +207,15 @@ def main():
                                    "args and writes them out to a config file at the given path, then "
                                    "exits", is_write_out_config_file_arg=True)
 
+    debug_group = parser.add_argument_group('Debug')
+    debug_group.add_argument('-x', '--exec', type=configargparse.FileType('r'), metavar="JOB_DESCRIPTION_JSON",
+                           default=None, help='Execute a job from its json description file. Will save job in DB and '
+                                              'run it in main process. Will then exit.')
+
     misc_group = parser.add_argument_group('Miscellaneous commands')
     misc_group.add_argument("-h", "--help", action="help", help="show this help message and exit.")
     misc_group.add_argument('--version', action='version', version='%(prog)s {version}'.format(version=get_version()), env_var=None)
+
 
     args = vars(parser.parse_args())
 
@@ -177,6 +229,18 @@ def main():
         db_port=int(args.get('port')),
         db_name=args.get('database')
     )
+
+    if args.get('exec'):
+        json_file = args.get('exec')
+        json_data = json_file.read()
+        execute_json(
+            db_host=args.get('server'),
+            db_port=int(args.get('port')),
+            db_name=args.get('database'),
+            json_data=json_data,
+            imports=args.get('imports')
+        )
+        exit(0)
 
     # Job Slots parsing
     if args.get('slots') == 'AUTO':

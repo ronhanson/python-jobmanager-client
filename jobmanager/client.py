@@ -7,7 +7,6 @@ Job Manager Client
 :author: Ronan Delacroix
 """
 import os
-import pip
 import signal
 import tbx
 import tbx.log
@@ -47,6 +46,8 @@ class JobManagerClientService(tbx.service.Service, common.LogProxy):
 
     def setup(self, db_host, db_port, db_name, imports, slots, log_file=None, update_timing=10):
         super(JobManagerClientService, self).setup()
+
+        self.log_file = log_file
 
         mongoengine.connect(host=db_host, port=db_port, db=db_name)
         self.log_info("Connected to database %s@%s:%d" % (db_name, db_host, db_port))
