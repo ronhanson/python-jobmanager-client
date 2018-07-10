@@ -65,9 +65,7 @@ class JobManagerClientService(tbx.service.Service, common.LogProxy):
         max_processes_amount = sum(self.host.job_slots.values())
         self.process_number_list = list(range(1, max_processes_amount+1))
 
-        host_status_update_timing = update_timing  # Update client status every 10 seconds
-
-        self.status_update_thread, self.status_update_stopper,  = tbx.process.call_repeatedly(self.host.update_status, host_status_update_timing)
+        status_update_thread, self.status_update_stopper,  = tbx.process.call_repeatedly(self.host.update_status, update_timing)
 
         self.log_info("Service setup complete.")
 
