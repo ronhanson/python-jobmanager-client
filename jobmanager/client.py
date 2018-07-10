@@ -253,12 +253,17 @@ class JobManagerClientService(tbx.service.Service, common.LogProxy):
                 job.status_text = "Error - exitcode=%s" % str(exitcode)
                 job.save()
 
+        status_update_stopper = self.status_update_stopper
+        self.status_update_stopper = None
         proc = Process(
             name="Process-%02d-%s" % (process_number, job.uuid),
             target=launch_job,
             args=(job, process_number, self)
         )
         proc.start()
+
+        self.status_update_stopper = status_update_stopper
+
         proc.job = job
         proc.process_number = process_number
         proc.callback_success = check_job_success
@@ -275,9 +280,11 @@ def launch_job(job, process_number, client_service):
     :param func:
     :return:
     """
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-    signal.signal(signal.SIGUSR1, signal.SIG_IGN)
-    signal.signal(signal.SIGUSR2, signal.SIG_IGN)
+    if platform.system() != 'Windows':
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGUSR1, signal.SIG_IGN)
+        signal.signal(signal.SIGUSR2, signal.SIG_IGN)
+
     if client_service.log_file:
         (root, ext) = os.path.splitext(client_service.log_file)
         process_log_file = root + ".process-%02d" % process_number + ext
