@@ -14,18 +14,14 @@ import tbx.text
 import tbx.process
 import tbx.service
 import tbx.settings
-import jobmanager
 from jobmanager.common.job import Job
 from jobmanager.common.host import Host
 import socket
-import psutil
 import platform
-import pprint
 import logging
 import sys
 import atexit
 import traceback
-from threading import Event, Thread
 import mongoengine
 from datetime import datetime, timedelta
 from multiprocessing import Process
@@ -192,7 +188,6 @@ class JobManagerClientService(tbx.service.Service, common.LogProxy):
         """
         Run method (launched every few seconds)
         """
-        #self.log_debug("Run %s with %d processes, %d busy (debug:%s)" % (self.service_name, POOL_SIZE, len(self.current_job_processes), self.debug))
 
         # Clean current jobs
         self.check_current_jobs()
@@ -242,17 +237,19 @@ class JobManagerClientService(tbx.service.Service, common.LogProxy):
                 self.process_number_list.append(process_number)
             except:
                 pass
-
-            self.log_error("Job %s ERROR callback" % (job.uuid))
             job.reload()
+            self.log_error("Job %s ERROR callback" % (job.uuid))
             if job.status != 'error':
                 job.details = "Error (callback) : exitcode=%s" % str(exitcode)
                 job.status = "error"
                 job.status_text = "Error - exitcode=%s" % str(exitcode)
                 job.save()
 
+        # Detach non-serializable thread/lock arguments
         status_update_stopper = self.status_update_stopper
         self.status_update_stopper = None
+
+        # Start process
         proc = Process(
             name="Process-%02d-%s" % (process_number, job.uuid),
             target=launch_job,
@@ -260,6 +257,7 @@ class JobManagerClientService(tbx.service.Service, common.LogProxy):
         )
         proc.start()
 
+        # Reattach non-serializable thread/lock arguments
         self.status_update_stopper = status_update_stopper
 
         proc.job = job
@@ -294,6 +292,7 @@ def launch_job(job, process_number, client_service):
 
     mongoengine.connect(host=client_service.db_host, port=client_service.db_port, db=client_service.db_name)
     try:
+        job.reload()  # reload job otherwise weak referenced object in it won't exist after forking processes
         job.run()
         exit(0)
     except Exception:

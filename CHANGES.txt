@@ -76,3 +76,4 @@
 2018-07-10	--	v0.13.16	-- Added debug job feature
 2018-07-10	--	v0.13.17	-- Fix for Windows
 2018-07-10	--	v0.13.18	-- Fix for Windows
+2018-07-11	--	v0.14.0	-- Working version on windows.
