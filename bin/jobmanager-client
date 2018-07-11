@@ -30,37 +30,6 @@ class RestartSignal(Exception):
     pass
 
 
-def configure_logging(verbosity, quiet=False, log_file=None, db_host=None, db_port=27017, db_name="jobmanager"):
-    logging.logThreads = False
-
-    logger = logging.getLogger()
-
-    for handler in logger.handlers:
-        logger.removeHandler(handler)
-
-    logger.setLevel(verbosity)
-
-    if not quiet:
-        tbx.log.add_screen_logging(logger)
-
-    if log_file:
-        tbx.log.add_logging_file_handler(logger, log_file)
-
-    if db_host:
-        tbx.log.add_mongo_logging(logger, 'jobmanager-client', 'jobmanager', {
-            'LOGGING_MONGO_HOST': db_host,
-            'LOGGING_MONGO_PORT': db_port,
-            'LOGGING_MONGO_DATABASE': db_name,
-            'LOGGING_MONGO_COLLECTION': "job_logs",
-            'LOGGING_MONGO_CAPPED': True,
-            'LOGGING_MONGO_CAPPED_MAX': 2000000,
-            'LOGGING_MONGO_CAPPED_SIZE': 512000000,
-            'LOGGING_MONGO_BUFFER_SIZE': 20,
-            'LOGGING_MONGO_BUFFER_FLUSH_TIMER': 5.0
-        })
-    return logger
-
-
 def execute_json(db_host, db_port, db_name, json_data, imports):
 
     try:
@@ -107,7 +76,16 @@ def execute_json(db_host, db_port, db_name, json_data, imports):
     exit(0)
 
 
-def run(db_host, db_port, db_name, job_imports, job_slots, log_file=None):
+def run(db_host, db_port, db_name, job_imports, job_slots, log_file=None, verbosity='DEBUG', quiet=False):
+
+    configure_logging(
+        verbosity,
+        quiet=quiet,
+        log_file=log_file,
+        db_host=db_host,
+        db_port=int(db_port),
+        db_name=db_name
+    )
 
     # Bind restart signal
     def restart_app(sig, stack):
@@ -129,7 +107,9 @@ def run(db_host, db_port, db_name, job_imports, job_slots, log_file=None):
                 db_name=db_name,
                 imports=job_imports,
                 slots=job_slots,
-                log_file=log_file
+                log_file=log_file,
+                verbosity=verbosity,
+                quiet=quiet
             )
             result = service.loop()
 
@@ -221,18 +201,18 @@ def main():
 
     # Logging setup
     log_file = os.path.abspath(args.get('log_file').name) if args.get('log_file') else None
-    configure_logging(
-        args.get('verbosity'),
-        quiet=args.get('quiet'),
-        log_file=log_file,
-        db_host=args.get('server'),
-        db_port=int(args.get('port')),
-        db_name=args.get('database')
-    )
 
     if args.get('exec'):
         json_file = args.get('exec')
         json_data = json_file.read()
+        configure_logging(
+            args.get('verbosity'),
+            quiet=args.get('quiet'),
+            log_file=log_file,
+            db_host=args.get('server'),
+            db_port=int(args.get('port')),
+            db_name=args.get('database')
+        )
         execute_json(
             db_host=args.get('server'),
             db_port=int(args.get('port')),
@@ -265,7 +245,9 @@ def main():
         db_name=args.get('database'),
         job_imports=args.get('imports'),
         job_slots=job_slots,
-        log_file=log_file
+        log_file=log_file,
+        verbosity=args.get('verbosity'),
+        quiet=args.get('quiet')
     )
     exit(0)
 

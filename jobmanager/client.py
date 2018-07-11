@@ -29,6 +29,37 @@ import time
 import jobmanager.common as common
 
 
+def configure_logging(verbosity, quiet=False, log_file=None, db_host=None, db_port=27017, db_name="jobmanager"):
+    logging.logThreads = False
+
+    logger = logging.getLogger()
+
+    for handler in logger.handlers:
+        logger.removeHandler(handler)
+
+    logger.setLevel(verbosity)
+
+    if not quiet:
+        tbx.log.add_screen_logging(logger)
+
+    if log_file:
+        tbx.log.add_logging_file_handler(logger, log_file)
+
+    if db_host:
+        tbx.log.add_mongo_logging(logger, 'jobmanager-client', 'jobmanager', {
+            'LOGGING_MONGO_HOST': db_host,
+            'LOGGING_MONGO_PORT': db_port,
+            'LOGGING_MONGO_DATABASE': db_name,
+            'LOGGING_MONGO_COLLECTION': "job_logs",
+            'LOGGING_MONGO_CAPPED': True,
+            'LOGGING_MONGO_CAPPED_MAX': 2000000,
+            'LOGGING_MONGO_CAPPED_SIZE': 512000000,
+            'LOGGING_MONGO_BUFFER_SIZE': 20,
+            'LOGGING_MONGO_BUFFER_FLUSH_TIMER': 5.0
+        })
+    return logger
+
+
 class JobManagerClientService(tbx.service.Service, common.LogProxy):
     """
     Job Manager Client Service
@@ -40,11 +71,10 @@ class JobManagerClientService(tbx.service.Service, common.LogProxy):
             self._hostname = socket.gethostname()
         return "JobManagerClient @ %s" % (self._hostname)
 
-    def setup(self, db_host, db_port, db_name, imports, slots, log_file=None, update_timing=10):
+    def setup(self, db_host, db_port, db_name, imports, slots, log_file=None, verbosity='DEBUG', quiet=False, update_timing=10):
         super(JobManagerClientService, self).setup()
 
-        self.log_file = log_file
-
+        # database parameters
         mongoengine.connect(host=db_host, port=db_port, db=db_name)
         self.log_info("Connected to database %s@%s:%d" % (db_name, db_host, db_port))
 
@@ -281,14 +311,25 @@ def launch_job(job, process_number, client_service):
         signal.signal(signal.SIGUSR1, signal.SIG_IGN)
         signal.signal(signal.SIGUSR2, signal.SIG_IGN)
 
+    process_log_file = None
     if client_service.log_file:
         (root, ext) = os.path.splitext(client_service.log_file)
         process_log_file = root + ".process-%02d" % process_number + ext
-        logger = logging.getLogger()
-        for handler in logger.handlers:
-            if isinstance(handler, logging.FileHandler):
-                logger.removeHandler(handler)
-        tbx.log.add_logging_file_handler(logging.getLogger(), process_log_file)
+
+    configure_logging(
+        client_service.verbosity,
+        quiet=client_service.quiet,
+        log_file=process_log_file,
+        db_host=client_service.db_host,
+        db_port=int(client_service.db_port),
+        db_name=client_service.db_name
+    )
+
+    #    logger = logging.getLogger()
+    #    for handler in logger.handlers:
+    #        if isinstance(handler, logging.FileHandler):
+    #            logger.removeHandler(handler)
+    #    tbx.log.add_logging_file_handler(logging.getLogger(), process_log_file)
 
     mongoengine.connect(host=client_service.db_host, port=client_service.db_port, db=client_service.db_name)
     try:
