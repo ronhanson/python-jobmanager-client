@@ -79,3 +79,4 @@
 2018-07-11	--	v0.14.0	-- Working version on windows.
 2018-07-11	--	v0.14.1	-- Fixed logging issue
 2018-07-11	--	v0.14.2	-- Fix
+2018-07-25	--	v0.14.3	-- iFix
